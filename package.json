@@ -1,0 +1,30 @@
+{
+	"name": "vite-project",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vue-tsc -b && vite build",
+		"preview": "vite preview"
+	},
+	"dependencies": {
+		"@antv/x6": "^2.18.1",
+		"@antv/x6-plugin-dnd": "^2.1.1",
+		"@antv/x6-plugin-scroller": "^2.0.10",
+		"element-plus": "^2.8.0",
+		"element-ui": "^2.15.14",
+		"vue": "^3.4.31"
+	},
+	"devDependencies": {
+		"@vitejs/plugin-vue": "^5.0.5",
+		"typescript": "^5.2.2",
+		"vite": "^5.3.4",
+		"vue-tsc": "^2.0.24"
+	},
+	"overrides": {
+		"vite": {
+			"rollup": "npm:@rollup/wasm-node"
+		}
+	}
+}
