@@ -118,20 +118,15 @@ export class SwimLane extends Basecoat {
     init(graph) {
         this.graph = graph
         graph.swimlane = this
-
         const { sizes } = this.options
         const matrix = this.initMatrix(sizes)
         this.matrix = matrix
-        this.transfrom = new TransfromImpl({
-            graph,
-            swimlane: this,
-            matrix,
-        })
         initTitle(graph, matrix)
-        // initSwimlaneTransfromHandler(graph, matrix)
         this.renderData()
-        // this.renderHandler()
-        console.log('init', graph, matrix.data)
+        this.transfromImpl = new TransfromImpl({
+            graph
+        })
+        console.log('init', graph, matrix)
     }
     initMatrix() {
         const { sizes } = this.options
@@ -142,6 +137,28 @@ export class SwimLane extends Basecoat {
             matrix.setValue(rowIndex, colIndex, itemData)
         })
         return matrix
+    }
+    getBBox() {
+        const { graph, matrix, matrix: { rows, cols } } = this
+        const { id: firstId } = matrix.getValue(0, 0)
+        const { id: lastId } = matrix.getValue(rows - 1, cols - 1)
+        const firstNode = graph.getCellById(firstId)
+        const lastNode = graph.getCellById(lastId)
+        if (firstNode && lastNode) {
+            const firstBBox = firstNode.getBBox()
+            const lastBBox = lastNode.getBBox()
+            const x = firstBBox.x
+            const y = firstBBox.y
+            const width = lastBBox.x + lastBBox.width - x
+            const height = lastBBox.y + lastBBox.height - y
+            return { x, y, width, height }
+        }
+        return {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0
+        }
     }
     checkRowOrColHasChildren({ rowIndex, colIndex }) {
         let result = false
@@ -163,26 +180,26 @@ export class SwimLane extends Basecoat {
     }
     insert(dataIndex) {
         const [rowIndex, colIndex] = dataIndex
+        const { matrix, matrix: { rows, cols } } = this
         let length = 0
         let type = ''
         let index = 0
         if (rowIndex === 0) {
             type = 'col'
             index = colIndex
-            length = this.matrix.rows
+            length = rows
         } else if (colIndex === 0) {
             type = 'row'
             index = rowIndex
-            length = this.matrix.cols
+            length = cols
         }
         const data = genInsertData(type, index, length, this.options)
         if (type === 'row') {
-            this.matrix.addRow(index, data)
+            matrix.addRow(index, data)
         } else if (type === 'col') {
-            this.matrix.addColumn(index, data)
+            matrix.addColumn(index, data)
         }
-        this.renderData(type, index)
-        console.log(this.matrix)
+        this.renderData({ type, index })
     }
     remove(dataIndex) {
         const [rowIndex, colIndex] = dataIndex
@@ -203,15 +220,45 @@ export class SwimLane extends Basecoat {
         }
         this.renderData(type, index, removedDatas)
     }
-    renderData(type, index, removedDatas) {
+    resize({ type, index, offset }) {
         let needUpdateData = []
         if (type === 'row') {
-            needUpdateData = this.matrix.sliceRow(index)
+            this.matrix.sliceRow(index).forEach((row, rowIndex) => {
+                row.forEach((col) => {
+                    if (rowIndex === 0) {
+                        col.height += offset
+                    } else {
+                        col.y += offset
+                    }
+                    needUpdateData.push(col)
+                })
+            })
         } else if (type === 'col') {
-            needUpdateData = this.matrix.sliceCol(index)
-        } else {
-            needUpdateData = this.matrix.flat()
+            this.matrix.sliceCol(index).forEach((row) => {
+                row.forEach((col, colIndex) => {
+                    if (colIndex === 0) {
+                        col.width += offset
+                    } else {
+                        col.x += offset
+                    }
+                    needUpdateData.push(col)
+                })
+            })
         }
+        this.renderData({ type, index, updatedDatas: needUpdateData })
+    }
+    renderData({ type, index, updatedDatas, removedDatas } = {}) {
+        const { rows, cols } = this.matrix
+        if (!Array.isArray(updatedDatas) || updatedDatas.length === 0) {
+            if (type === 'row') {
+                updatedDatas = this.matrix.sliceRow(index, rows, true)
+            } else if (type === 'col') {
+                updatedDatas = this.matrix.sliceCol(index, cols, true)
+            } else {
+                updatedDatas = this.matrix.flat()
+            }
+        }
+
         const { graph, matrix } = this
 
         graph.startBatch('render-data')
@@ -220,99 +267,35 @@ export class SwimLane extends Basecoat {
                 item.id && graph.removeNode(item.id)
             })
         }
-        needUpdateData.forEach((item) => {
-            const { id, index, x, y, width, height } = item
-            if (id) {
-                const node = graph.getCellById(id)
-                node.resize(width, height)
-                node.position(x, y)
-                node.updateData({ index })
-            } else {
-                const { index, ...other } = item
-                const node = graph.addNode({
-                    ...other,
-                    data: item
-                })
-                node.attr('text/text', node.id.substring(0, 4))
-                matrix.setValue(...index, {
-                    ...item,
-                    id: node.id
-                })
-            }
+        if (updatedDatas && updatedDatas.length > 0) {
+            updatedDatas.forEach((item) => {
+                const { id, index, x, y, width, height } = item
+                if (id) {
+                    const node = graph.getCellById(id)
+                    node.resize(width, height)
+                    node.position(x, y)
+                    node.updateData({ index })
+                } else {
+                    const { index, ...other } = item
+                    const node = graph.addNode({
+                        ...other,
+                        data: item
+                    })
+                    node.attr('text/text', node.id.substring(0, 4))
+                    matrix.setValue(...index, {
+                        ...item,
+                        id: node.id
+                    })
+                }
 
-        })
+            })
+        }
         graph.stopBatch('render-data')
         console.log(matrix.data)
     }
-    renderHandler() {
-        const { graph, matrix: { data, rows, cols } } = this
-        const first = data[0][0]
-        const last = data[rows - 1][cols - 1]
-        const start = {
-            x: first.x + handlerPadding,
-            y: first.y + handlerPadding
-        }
-        const end = {
-            x: last.x + last.width - handlerPadding,
-            y: last.y + last.height - handlerPadding
-        }
-        graph.startBatch('render-handler')
-        const edges = []
-        for (let i = 0; i < rows; i++) {
-            const row = data[i]
-            const { y, height } = row[0]
-            const handlerY = y + height
-            edges.push({
-                shape: 'swimlane-transform-handler',
-                horizontal: true,
-                source: {
-                    x: start.x,
-                    y: handlerY
-                },
-                target: {
-                    x: end.x,
-                    y: handlerY
-                }
-            })
-        }
-        const firstCols = data[0]
-        for (let j = 0; j < cols; j++) {
-            const col = firstCols[j]
-            const { x, width } = col
-            const handlerX = x + width
-            edges.push({
-                shape: 'swimlane-transform-handler',
-                source: {
-                    x: handlerX,
-                    y: start.y
-                },
-                target: {
-                    x: handlerX,
-                    y: end.y
-                }
-            })
-        }
-        graph.addEdges(edges)
-        graph.stopBatch('render-handler')
-    }
-    initEvent() {
-        const { graph } = this
-        //设置swimLane active状态
-        graph.on('node:click', ({ node }) => {
-            this.updateTransformHandler(node.isNode() && node.shape.startsWith('swimlane'))
-        })
-        graph.on('blank:click', () => {
-            this.updateTransformHandler(false)
-        })
-    }
-    updateTransformHandler(activating) {
-        if (activating) {
-            this.initTransformHandler.show()
-        } else {
-            this.initTransformHandler.hide()
-        }
-    }
     setData() { }
     dispose() {
+        this.transfromImpl.dispose()
+        CssLoader.clean(this.name)
     }
 }

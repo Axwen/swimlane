@@ -18,25 +18,31 @@ export default class Matrix {
     flat() {
         return this.data.flat()
     }
-    sliceRow(start, end) {
+    sliceRow(start, end, flatten = false) {
         if (start < 0 || end > this.rows) {
             throw new Error('Invalid row index');
         }
         end = end || this.rows;
-        return this.data.slice(start, end).flat();
+        const data = this.data.slice(start, end)
+        return flatten ? data.flat() : data;
     }
-    sliceCol(start, end) {
+    sliceCol(start, end, flatten = false) {
         if (start < 0 || end > this.cols) {
             throw new Error('Invalid row index');
         }
         end = end || this.cols;
         const result = [];
+        const flattenResult = []
         for (let i = 0; i < this.rows; i++) {
+            let row = []
             for (let j = start; j < end; j++) {
-                result.push(this.data[i][j]);
+                const col = this.data[i][j]
+                row.push(col)
+                flattenResult.push(col);
             }
+            result.push(row)
         }
-        return result
+        return flatten ? flattenResult : result
     }
 
     // 获取矩阵中的值
