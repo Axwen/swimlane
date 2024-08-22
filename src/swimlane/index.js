@@ -1,139 +1,158 @@
-import { Basecoat, CssLoader } from '@antv/x6/lib'
-
+import { Basecoat, CssLoader } from '@antv/x6'
 
 import Matrix from './matrix'
-import { registrySwimlaneTitle, initTitle, BASE_LABEL } from './title'
-import { registrySwimlaneContent } from './content'
-import { TransfromImpl } from './Transfrom'
-import { swimlaneBaseConfig, handlerPadding } from './variables'
+import { registrySwimlaneTitle, initTitle, BASE_LABEL } from './shape/title'
+import { registrySwimlaneContent } from './shape/content'
+import { TransfromImpl } from './transfrom'
+import { swimLaneBaseConfig, swimLanePadding } from './variables'
 import { content } from './style'
 
 registrySwimlaneTitle()
 registrySwimlaneContent()
-// registrySwimlaneTransfromHandler()
 
-function createBlankData(options) {
+function genSwimLaneItemBBox([i, j], options) {
     const {
-        position: [x, y],
-        rowTitleHeight,
-        columnTitleWidth
-    } = options
-    return {
-        x,
-        y,
-        width: columnTitleWidth,
-        height: rowTitleHeight
-    }
-}
-function createSwimLaneTitleData(i, j, options) {
-    const {
-        position: [x, y],
+        position: [originX, originY],
         rowTitleHeight,
         columnTitleWidth,
         laneWidth,
-        laneHeight
+        laneHeight,
     } = options
     return {
-        x: j === 0 ? x : x + columnTitleWidth + laneWidth * (j - 1),
-        y: i === 0 ? y : y + rowTitleHeight + laneHeight * (i - 1),
-        width: i === 0 ? laneWidth : columnTitleWidth,
-        height: j === 0 ? laneHeight : rowTitleHeight,
-        label: i + ',' + j || BASE_LABEL
+        x: j === 0 ? originX : originX + columnTitleWidth + laneWidth * (j - 1),
+        y: i === 0 ? originY : originY + rowTitleHeight + laneHeight * (i - 1),
+        width: j === 0 ? columnTitleWidth : laneWidth,
+        height: i === 0 ? rowTitleHeight : laneHeight
     }
 }
-function createSwimLaneContentData(i, j, options) {
-    const {
-        position: [x, y],
-        rowTitleHeight,
-        columnTitleWidth,
-        laneWidth,
-        laneHeight
-    } = options
+function genSwimLaneItemData(index, options, bbox) {
+    const [i, j] = index
+    let shape = 'swimlane-content';
+    let label = ''
+    if (i === 0 || j === 0) {
+        shape = 'swimlane-title'
+        label = BASE_LABEL
+    }
+    bbox = bbox || genSwimLaneItemBBox(index, options)
     return {
-        x: x + columnTitleWidth + laneWidth * (j - 1),
-        y: y + rowTitleHeight + laneHeight * (i - 1),
-        width: laneWidth,
-        height: laneHeight
-    }
-}
-
-function createSwimLaneItem(i, j, options) {
-    const shape = i === 0 || j === 0 ? 'swimlane-title' : 'swimlane-content'
-    const blank = i === 0 && j === 0
-    const base = {
         shape,
-        blank,
-        index: [i, j],
+        blank: i === 0 && j === 0,
+        index,
         zIndex: 0,
-    }
-    let info = {}
-    if (blank) {
-        info = createBlankData(options)
-    } else if (shape === 'swimlane-title') {
-        info = createSwimLaneTitleData(i, j, options)
-    } else if (shape === 'swimlane-content') {
-        info = createSwimLaneContentData(i, j, options)
-    }
-    return {
-        ...base,
-        ...info
+        label,
+        ...bbox,
     }
 }
 
-function genInsertData(type, index, length, options) {
-    index += 1
-    const data = Array(length).fill(null).map((item, itemIndex) => {
-        let newDataIndex = []
-        if (type === 'row') {
-            newDataIndex = [index, itemIndex]
-        } else if (type === 'col') {
-            newDataIndex = [itemIndex, index]
-        }
-        item = createSwimLaneItem(...newDataIndex, options)
-        console.log(item, newDataIndex)
-        return item
-    })
-    console.log('genInsertData', data)
-    return data
+// 群组改变时，自动调整子节点 左侧超出就移动子节点 右侧超出就扩大
+function autoResizeSwimLane({ node, currentParent }) {
+    const { graph } = this
+    const selectedCells = graph.getSelectedCells()
+    if (selectedCells.length === 0) {
+        selectedCells.push(node)
+    }
+    const {
+        left,
+        top,
+        right,
+        bottom
+    } = graph.getCellsBBox(selectedCells)
+    const {
+        left: parentLeft,
+        top: parentTop,
+        right: parentRight,
+        bottom: parentBottom,
+    } = currentParent.getBBox()
 
+    const minX = parentLeft + swimLanePadding
+    const minY = parentTop + swimLanePadding
+    const maxX = parentRight - swimLanePadding
+    const maxY = parentBottom - swimLanePadding
+
+    let offetX = 0
+    let offsetY = 0
+    let resizeX = 0
+    let resizeY = 0
+    // 判断左侧是不是在父节点的内，不是的向右移动
+    if (left < minX) {
+        offetX = left - minX
+    }
+    if (top < minY) {
+        offsetY = top - minY
+    }
+
+    // 判断右侧是不是在父节点的内（包含移动后），不是的话 扩展节点宽度
+    const afterMoveChildrenMaxX = right - offetX
+    const afterMoveChildrenMaxY = bottom - offsetY
+    if (afterMoveChildrenMaxX > maxX) {
+        resizeX = afterMoveChildrenMaxX - maxX
+    }
+    if (afterMoveChildrenMaxY > maxY) {
+        resizeY = afterMoveChildrenMaxY - maxY
+    }
+    const { index: [rowIndex, colIndex] } = currentParent.getData()
+    graph.startBatch('batch-move-children')
+    if (offetX !== 0 || offsetY !== 0) {
+        selectedCells.forEach((cell) => {
+            cell.translate(-offetX, -offsetY)
+        })
+    }
+    if (resizeX) {
+        this.resize({ type: 'col', index: colIndex, offset: resizeX })
+    }
+    if (resizeY) {
+        this.resize({ type: 'row', index: rowIndex, offset: resizeY })
+    }
+    graph.stopBatch('batch-move-children')
 }
+
 export class SwimLane extends Basecoat {
+    static isSwimLane({ view, node }) {
+        const shape = node ? node.shape : view ? view.cell.shape : ''
+        return shape.startsWith('swimlane')
+    }
+    static findParentSwimLane(nodes, currentNode) {
+        const bbox = currentNode.getBBox()
+        return nodes.filter((node) => {
+            if (node.shape === 'swimlane-content') {
+                const targetBBox = node.getBBox()
+                // return targetBBox.containsRect(bbox)
+                return bbox.isIntersectWithRect(targetBBox)
+            }
+            return false
+        })
+    }
     constructor(options) {
         super()
         this.name = 'swimlane'
         this.activating = false
-        const { position: [x, y], rowTitleHeight, sizes } = swimlaneBaseConfig
+        const { position: [x, y], rowTitleHeight, sizes } = swimLaneBaseConfig
         this.sizes = sizes
-        // this.options = Object.assign({}, swimlaneBaseConfig, options)
-        this.options = Object.assign({}, swimlaneBaseConfig, {
+        // this.options = Object.assign({}, swimLaneBaseConfig, options)
+        this.options = Object.assign({}, swimLaneBaseConfig, {
             // 主标题的position
             origin: [x, y],
             //初始化position的还需要放一个主标题，剩余内容从这个位置开始
             position: [x, y + rowTitleHeight]
         })
         CssLoader.ensure(this.name, content)
-        console.log('options', options, this.options)
     }
-
     init(graph) {
         this.graph = graph
         graph.swimlane = this
-        const { sizes } = this.options
-        const matrix = this.initMatrix(sizes)
+        const matrix = this.initMatrix()
         this.matrix = matrix
         initTitle(graph, matrix)
         this.renderData()
-        this.transfromImpl = new TransfromImpl({
-            graph
-        })
-        console.log('init', graph, matrix)
+        this.transfromImpl = new TransfromImpl({ graph })
+        this.bindEvents()
     }
     initMatrix() {
         const { sizes } = this.options
         const [rowSize, colSize] = sizes
         const matrix = new Matrix(rowSize + 1, colSize + 1)
         matrix.traverse((item, rowIndex, colIndex) => {
-            const itemData = createSwimLaneItem(rowIndex, colIndex, this.options)
+            const itemData = genSwimLaneItemData([rowIndex, colIndex], this.options)
             matrix.setValue(rowIndex, colIndex, itemData)
         })
         return matrix
@@ -160,23 +179,51 @@ export class SwimLane extends Basecoat {
             height: 0
         }
     }
-    checkRowOrColHasChildren({ rowIndex, colIndex }) {
-        let result = false
+    checkRowOrColHasChildren([rowIndex, colIndex]) {
+        let items = []
         if (rowIndex > 0 && rowIndex < this.matrix.rows) {
-            const rows = this.matrix[rowIndex]
-            result = rows.some(item => {
-                const cell = this.graph.getCellById(item.id)
-                return cell.children && cell.children.length > 0
-            })
+            items = this.matrix.sliceRow(rowIndex, rowIndex + 1, true)
         }
         if (colIndex > 0 && colIndex < this.matrix.cols) {
-            result = this.matrix.some(row => {
-                const item = row[colIndex]
-                const cell = this.graph.getCellById(item.id)
-                return cell.children && cell.children.length > 0
-            })
+            items = this.matrix.sliceCol(colIndex, colIndex + 1, true)
         }
-        return result
+        return items.some(item => {
+            const cell = this.graph.getCellById(item.id)
+            return cell.children && cell.children.length > 0
+        })
+    }
+    genInsertData(type, index, length, data) {
+        const { laneWidth, laneHeight } = this.options
+        index += 1
+        let increment = 0
+        return Array(length).fill(null).map((item, itemIndex) => {
+            let newDataIndex = []
+            const bbox = {}
+            if (type === 'row') {
+                newDataIndex = [index, itemIndex]
+                const { x, y, width } = data[0][itemIndex]
+                if (itemIndex === 0) {
+                    increment = x
+                }
+                bbox.width = width
+                bbox.height = laneHeight
+                bbox.x = increment
+                bbox.y = y
+                increment += width
+            } else if (type === 'col') {
+                newDataIndex = [itemIndex, index]
+                const { x, y, height } = data[itemIndex][0]
+                if (itemIndex === 0) {
+                    increment = y
+                }
+                bbox.width = laneWidth
+                bbox.height = height
+                bbox.x = x
+                bbox.y = increment
+                increment += height
+            }
+            return genSwimLaneItemData(newDataIndex, this.options, bbox)
+        })
     }
     insert(dataIndex) {
         const [rowIndex, colIndex] = dataIndex
@@ -184,16 +231,19 @@ export class SwimLane extends Basecoat {
         let length = 0
         let type = ''
         let index = 0
+        let current = []
         if (rowIndex === 0) {
             type = 'col'
             index = colIndex
             length = rows
+            current = matrix.sliceCol(colIndex, colIndex + 1)
         } else if (colIndex === 0) {
             type = 'row'
             index = rowIndex
             length = cols
+            current = matrix.sliceRow(rowIndex, rowIndex + 1)
         }
-        const data = genInsertData(type, index, length, this.options)
+        const data = this.genInsertData(type, index, length, current)
         if (type === 'row') {
             matrix.addRow(index, data)
         } else if (type === 'col') {
@@ -218,7 +268,7 @@ export class SwimLane extends Basecoat {
         } else if (type === 'col') {
             removedDatas = this.matrix.removeColumn(index)
         }
-        this.renderData(type, index, removedDatas)
+        this.renderData({ type, index, removedDatas })
     }
     resize({ type, index, offset }) {
         let needUpdateData = []
@@ -264,7 +314,17 @@ export class SwimLane extends Basecoat {
         graph.startBatch('render-data')
         if (removedDatas && removedDatas.length > 0) {
             removedDatas.forEach(item => {
-                item.id && graph.removeNode(item.id)
+                const { id } = item
+                if (id) {
+                    const node = graph.getCellById(id)
+                    const children = node.getChildren()
+                    if (children && children.length > 0) {
+                        children.forEach(child => {
+                            node.remove(child)
+                        })
+                    }
+                    graph.removeNode(node)
+                }
             })
         }
         if (updatedDatas && updatedDatas.length > 0) {
@@ -272,6 +332,13 @@ export class SwimLane extends Basecoat {
                 const { id, index, x, y, width, height } = item
                 if (id) {
                     const node = graph.getCellById(id)
+                    const children = node.getChildren()
+                    if (children && children.length > 0) {
+                        children.forEach(child => {
+                            const relativePos = child.position({ relative: true })
+                            child.position(x + relativePos.x, y + relativePos.y)
+                        })
+                    }
                     node.resize(width, height)
                     node.position(x, y)
                     node.updateData({ index })
@@ -291,11 +358,23 @@ export class SwimLane extends Basecoat {
             })
         }
         graph.stopBatch('render-data')
-        console.log(matrix.data)
+        graph.emit('swimlane:rendered', { matrix })
+    }
+    bindEvents() {
+        const { graph } = this
+        graph.on('node:embedded', autoResizeSwimLane, this)
+        graph.on('history:undo', function ({ cmds }) {
+            console.log(cmds)
+        }, this)
+    }
+    unbindEvents() {
+        const { graph } = this
+        graph.off('node:embedded', autoResizeSwimLane, this)
     }
     setData() { }
     dispose() {
         this.transfromImpl.dispose()
+        this.unbindEvents()
         CssLoader.clean(this.name)
     }
 }

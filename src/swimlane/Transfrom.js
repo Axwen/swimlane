@@ -1,12 +1,12 @@
-import { View, Dom, FunctionExt } from '@antv/x6/lib'
-import { swimlaneBaseConfig } from './variables'
+import { View, Dom, FunctionExt } from '@antv/x6'
+import { swimLaneBaseConfig, swimLanePadding } from './variables'
 
 const {
     laneWidth,
     laneHeight,
     rowTitleHeight: minRowSize,
-    columnTitleWidth: minColSize
-} = swimlaneBaseConfig
+    columnTitleWidth: minColSize,
+} = swimLaneBaseConfig
 
 const documentEvents = {
     mousemove: 'onMouseMove',
@@ -41,11 +41,8 @@ export class TransfromImpl extends View {
     }
     render() {
         this.initContainer()
-        this.appendHandlers()
-        this.updateTransfrom()
+        this.updateTransform()
     }
-    show() { }
-    hide() { }
     initContainer() {
         const container = this.container = Dom.createElement('div')
         const content = this.content = Dom.createElement('div')
@@ -54,7 +51,7 @@ export class TransfromImpl extends View {
         Dom.append(container, content)
         Dom.append(this.graph.container, this.container)
     }
-    appendHandlers() {
+    updateHandlers() {
         Dom.empty(this.content)
         Dom.append(this.content, this.createHandlers())
     }
@@ -98,17 +95,11 @@ export class TransfromImpl extends View {
         const verticalHandlers = this.createVerticalHandlers()
         return horizontalHandlers.concat(verticalHandlers)
     }
-    updateTransfrom() {
-        const bbox = this.swimlane.getBBox()
-        const pos = this.graph.localToPage(bbox.x, bbox.y)
-        Dom.css(this.container, {
-            width: bbox.width,
-            height: bbox.height,
-            left: pos.x,
-            top: pos.y,
-        })
+    updateTransform() {
+        this.updateContainer()
+        this.updateHandlers()
     }
-    onGraphTransform() {
+    updateContainer() {
         const ctm = this.graph.matrix()
         const bbox = this.swimlane.getBBox()
         bbox.x *= ctm.a
@@ -116,15 +107,20 @@ export class TransfromImpl extends View {
         bbox.y *= ctm.d
         bbox.y += ctm.f
         Dom.css(this.container, {
+            width: bbox.width,
+            height: bbox.height,
             transform: `scale3d(${ctm.a},${ctm.d},1)`,
             left: bbox.x,
             top: bbox.y,
         })
     }
     startListening() {
-        const { graph, onGraphTransform, } = this
-        graph.on('translate', onGraphTransform, this)
-        graph.on('scale', onGraphTransform, this)
+        const { graph, updateTransform, updateContainer } = this
+        graph.on('translate', updateContainer, this)
+        graph.on('scale', updateContainer, this)
+        graph.on('swimlane:rendered', updateTransform, this)
+        graph.on('history:undo', updateTransform, this)
+        graph.on('history:redo', updateTransform, this)
         this.delegateEvents({
             [`mousedown .${this.handlerClassName}`]: 'startResizing',
             [`touchstart .${this.handlerClassName}`]: 'startResizing',
@@ -132,9 +128,12 @@ export class TransfromImpl extends View {
         this.delegateDocumentEvents(documentEvents)
     }
     stopListening() {
-        const { graph, onGraphTransform } = this
-        graph.off('translate', onGraphTransform, this)
-        graph.off('scale', onGraphTransform, this)
+        const { graph, updateTransform, updateContainer } = this
+        graph.off('translate', updateContainer, this)
+        graph.off('scale', updateContainer, this)
+        graph.off('swimlane:rendered', updateContainer, this)
+        graph.off('history:undo', updateTransform, this)
+        graph.off('history:redo', updateTransform, this)
         this.undelegateEvents()
         this.undelegateDocumentEvents()
     }
@@ -157,52 +156,90 @@ export class TransfromImpl extends View {
         let position = start + offset
         position = Math.min(position, max)
         position = Math.max(position, min)
-        this.handler.offset = position - start
         Dom.css(target, {
             [positionKey]: position
         })
+        this.handler.offset = position - start
     }, 16)
     onMouseUp() {
         if (!this.handler) {
             return
         }
-        this.resize()
-        this.updateTransfrom()
+        if (this.handler.offset) {
+            this.resize()
+        }
+        this.updateContainer()
         this.stopHandler()
         this.graph.view.delegateEvents()
+    }
+    getChildren(dir, index) {
+        let swimLaneItems = []
+        const allChildren = []
+        const swimLaneNodes = []
+        index = Number(index)
+        if (dir === 'vertical') {
+            swimLaneItems = this.matrix.sliceCol(index, index + 1, true)
+        } else {
+            swimLaneItems = this.matrix.sliceRow(index, index + 1, true)
+        }
+        swimLaneItems.forEach(item => {
+            const { id } = item
+            const node = this.graph.getCellById(id)
+            const children = node.getChildren() || []
+            swimLaneNodes.push(node)
+            allChildren.push(...children)
+        })
+        const { x: originX, y: originY } = this.swimlane.getBBox()
+        const { top, bottom, left, right } = this.graph.getCellsBBox(swimLaneNodes)
+        let min = dir === 'vertical' ? left - originX + minColSize : top - originY + minRowSize
+        const max = dir === 'vertical' ? right - originX + laneWidth : bottom - originY + laneHeight
+        if (allChildren.length > 0) {
+            const { right, bottom } = this.graph.getCellsBBox(allChildren)
+            console.log(right, bottom)
+            min = (dir === 'vertical' ? right - originX : bottom - originY) + swimLanePadding
+        }
+        return {
+            min,
+            max
+        }
     }
     getMovableRange(dir, index) {
         let min = 0;
         let max = 0;
         const { x: originX, y: originY } = this.swimlane.getBBox()
         const nextIndex = index + 1
+
         if (dir === 'vertical') {
             const item = this.matrix.getValue(0, index)
             const { x, width } = item
-            min = x - originX + minColSize
+            const base = x - originX
+            min = base + minColSize
             if (nextIndex < this.cols) {
                 const nextItem = this.matrix.getValue(0, nextIndex)
                 const { x: nextX } = nextItem
                 max = nextX
             } else {
-                max = min - minColSize + width + laneWidth
+                max = base + width + laneWidth
             }
         } else {
             const item = this.matrix.getValue(index, 0)
             const { y, height } = item
-            min = y - originY + minRowSize
+            const base = y - originY
+            min = base + minRowSize
             if (nextIndex < this.rows) {
                 const nextItem = this.matrix.getValue(nextIndex, 0)
                 const { y: nextY } = nextItem
                 max = nextY
             } else {
-                max = min - minRowSize + height + laneHeight
+                max = base - minRowSize + height + laneHeight
             }
         }
-        return {
-            min,
-            max
-        }
+        console.log(this.getChildren(dir, index), { min, max })
+        return this.getChildren(dir, index)
+        // return {
+        //     min,
+        //     max
+        // }
     }
     startHandler(handler) {
         const dir = Dom.attr(handler, 'data-dir')
@@ -241,7 +278,6 @@ export class TransfromImpl extends View {
             index,
             offset
         })
-        this.appendHandlers()
     }
     dispose() {
         this.stopListening()

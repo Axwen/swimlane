@@ -1,6 +1,6 @@
-import { Graph, ObjectExt } from '@antv/x6/lib'
+import { Graph } from '@antv/x6'
 
-import { fillColor, strokeColor, labelColor, strokeWidth } from './variables'
+import { fillColor, strokeWidth } from '../variables'
 
 const contentShape = {
     inherit: 'rect',

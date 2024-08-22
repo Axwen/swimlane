@@ -7,7 +7,6 @@ export default class Matrix {
         this.data = Array.from({ length: rows }, () => Array(cols).fill(null));
     }
 
-
     traverse(callback) {
         for (let i = 0; i < this.rows; i++) {
             for (let j = 0; j < this.cols; j++) {
@@ -126,21 +125,6 @@ export default class Matrix {
     // 检查索引是否有效
     isValidIndex(row, col) {
         return row >= 0 && row < this.rows && col >= 0 && col < this.cols;
-    }
-    updateRowPropsFromIndex(startRowIndex, props = ['index', 'position']) {
-        if (startRowIndex < 0 || startRowIndex >= this.rows) {
-            throw new Error('Invalid start row index');
-        }
-        const startY = this.data[startRowIndex - 1][0].y;
-        console.log('startY', startY)
-        for (let i = startRowIndex; i < this.rows; i++) {
-            const row = this.data[i];
-            for (let j = 0; j < this.cols; j++) {
-                if (props.includes('index')) {
-                    row[j]['index'] = [i, j]
-                }
-            }
-        }
     }
     updateRowIndexFrom(startRow) {
         if (startRow < 0 || startRow >= this.rows) {

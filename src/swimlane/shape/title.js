@@ -1,11 +1,11 @@
 
 
-import { Graph, ObjectExt } from '@antv/x6/lib'
-import { Button } from '@antv/x6/lib/registry/tool/button'
+import { Graph, ObjectExt } from '@antv/x6'
+import { Button } from '@antv/x6/es/registry/tool/button'
 import { ElMessageBox } from 'element-plus'
 
-import { getCrossPath, getLinePath } from './utils'
-import { fillColor, strokeColor, labelColor, strokeWidth } from './variables'
+import { getCrossPath, getLinePath } from '../utils'
+import { fillColor, strokeColor, labelColor, strokeWidth } from '../variables'
 
 export const BASE_LABEL = '请输入...'
 
@@ -70,22 +70,19 @@ const removeTitleButton = Button.define({
         e.stopPropagation()
         const { graph } = view
         const { index } = cell.getData()
+        const hasChildren = graph.swimlane.checkRowOrColHasChildren(index)
+        if (hasChildren) {
+            ElMessageBox.confirm('该泳道内存在内容，删除后会同步删除泳道内的内容，确认删除?', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+
+                graph.swimlane.remove(index)
+            })
+            return
+        }
         graph.swimlane.remove(index)
-        // const { index } = cell.getData()
-        // const [rowIndex, colIndex] = index
-        // if(rowIndex === 0 ){}
-        // const hasChildren = graph.swimlane.checkRowOrColHasChildren()
-        // if (hasChildren) {
-        //     ElMessageBox.confirm('该泳道内存在内容，删除后会同步删除泳道内的内容，确认删除?', '提示', {
-        //         confirmButtonText: '确定',
-        //         cancelButtonText: '取消',
-        //         type: 'warning'
-        //     }).then(() => {
-        //         const { index } = cell.getData()
-        //         graph.swimlane.remove(index)
-        //     })
-        //     return
-        // }
     },
 })
 
@@ -162,12 +159,12 @@ function addTitleTools(node, graph) {
             }
         })
     }
-    node.addTools(tools)
+    node.addTools(tools, { ignoreHistory: true })
 }
 
 function removeTitleTools(node) {
-    node.removeTool('title-add')
-    node.removeTool('title-remove')
+    node.removeTool('title-add', { ignoreHistory: true })
+    node.removeTool('title-remove', { ignoreHistory: true })
 }
 
 

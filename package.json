@@ -11,14 +11,16 @@
 	"dependencies": {
 		"@antv/x6": "^2.18.1",
 		"@antv/x6-plugin-dnd": "^2.1.1",
+		"@antv/x6-plugin-history": "^2.2.4",
 		"@antv/x6-plugin-scroller": "^2.0.10",
+		"@antv/x6-plugin-selection": "^2.2.2",
 		"element-plus": "^2.8.0",
-		"element-ui": "^2.15.14",
-		"lodash-es": "^4.17.21",
 		"vue": "^3.4.31"
 	},
 	"devDependencies": {
 		"@vitejs/plugin-vue": "^5.0.5",
+		"sass": "^1.77.8",
+		"sass-loader": "^16.0.1",
 		"typescript": "^5.2.2",
 		"vite": "^5.3.4",
 		"vue-tsc": "^2.0.24"
