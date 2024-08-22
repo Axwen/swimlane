@@ -94,6 +94,9 @@ function autoResizeSwimLane({ node, currentParent }) {
     graph.startBatch('batch-move-children')
     if (offetX !== 0 || offsetY !== 0) {
         selectedCells.forEach((cell) => {
+            if(!cell.getParent()){
+                cell.setParent(currentParent)
+            }
             cell.translate(-offetX, -offsetY)
         })
     }
