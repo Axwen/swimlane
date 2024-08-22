@@ -108,7 +108,7 @@ onMounted(() => {
 
   graph.addNode({
     x: 100,
-    y: 60,
+    y: 20,
     width: 100,
     height: 40,
     label: 'Rect',
@@ -121,7 +121,7 @@ onMounted(() => {
   })
   graph.addNode({
     x: 200,
-    y: 60,
+    y: 20,
     width: 100,
     height: 40,
     label: 'Rect',
@@ -134,7 +134,7 @@ onMounted(() => {
   })
   graph.addNode({
     x: 100,
-    y: 100,
+    y: 60,
     width: 100,
     height: 40,
     label: 'Rect',
@@ -147,7 +147,7 @@ onMounted(() => {
   })
   graph.addNode({
     x: 200,
-    y: 100,
+    y: 60,
     width: 100,
     height: 40,
     label: 'Rect',

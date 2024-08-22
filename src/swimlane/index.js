@@ -1,7 +1,7 @@
 import { Basecoat, CssLoader } from '@antv/x6'
 
 import Matrix from './matrix'
-import { registrySwimlaneTitle, initTitle, BASE_LABEL } from './shape/title'
+import { registrySwimlaneTitle, bindTitleEvent, BASE_LABEL } from './shape/title'
 import { registrySwimlaneContent } from './shape/content'
 import { TransfromImpl } from './transfrom'
 import { swimLaneBaseConfig, swimLanePadding } from './variables'
@@ -94,7 +94,7 @@ function autoResizeSwimLane({ node, currentParent }) {
     graph.startBatch('batch-move-children')
     if (offetX !== 0 || offsetY !== 0) {
         selectedCells.forEach((cell) => {
-            if(!cell.getParent()){
+            if (!cell.getParent()) {
                 cell.setParent(currentParent)
             }
             cell.translate(-offetX, -offsetY)
@@ -143,10 +143,9 @@ export class SwimLane extends Basecoat {
     init(graph) {
         this.graph = graph
         graph.swimlane = this
-        const matrix = this.initMatrix()
-        this.matrix = matrix
-        initTitle(graph, matrix)
+        this.matrix = this.initMatrix()
         this.renderData()
+        this.mainTitleNode = this.initMainTitle()
         this.transfromImpl = new TransfromImpl({ graph })
         this.bindEvents()
     }
@@ -160,27 +159,36 @@ export class SwimLane extends Basecoat {
         })
         return matrix
     }
+    initMainTitle() {
+        const { graph } = this
+        const { rowTitleHeight } = this.options
+        const { x, y, width } = this.getBBox()
+        return graph.addNode({
+            shape: 'swimlane-title',
+            mainTitle: true,
+            x: x,
+            y: y - rowTitleHeight,
+            width: width,
+            height: rowTitleHeight,
+            label: BASE_LABEL
+        })
+    }
+    updateMainTitle() {
+        if (!this.mainTitleNode) {
+            return
+        }
+        const { width } = this.getBBox()
+        const { height } = this.mainTitleNode.size()
+        this.mainTitleNode.size(width, height)
+    }
+
     getBBox() {
         const { graph, matrix, matrix: { rows, cols } } = this
         const { id: firstId } = matrix.getValue(0, 0)
         const { id: lastId } = matrix.getValue(rows - 1, cols - 1)
         const firstNode = graph.getCellById(firstId)
         const lastNode = graph.getCellById(lastId)
-        if (firstNode && lastNode) {
-            const firstBBox = firstNode.getBBox()
-            const lastBBox = lastNode.getBBox()
-            const x = firstBBox.x
-            const y = firstBBox.y
-            const width = lastBBox.x + lastBBox.width - x
-            const height = lastBBox.y + lastBBox.height - y
-            return { x, y, width, height }
-        }
-        return {
-            x: 0,
-            y: 0,
-            width: 0,
-            height: 0
-        }
+        return graph.getCellsBBox([firstNode, lastNode])
     }
     checkRowOrColHasChildren([rowIndex, colIndex]) {
         let items = []
@@ -351,7 +359,7 @@ export class SwimLane extends Basecoat {
                         ...other,
                         data: item
                     })
-                    node.attr('text/text', node.id.substring(0, 4))
+                    // node.attr('text/text', node.id.substring(0, 4))
                     matrix.setValue(...index, {
                         ...item,
                         id: node.id
@@ -360,19 +368,19 @@ export class SwimLane extends Basecoat {
 
             })
         }
+        this.updateMainTitle()
         graph.stopBatch('render-data')
         graph.emit('swimlane:rendered', { matrix })
     }
     bindEvents() {
         const { graph } = this
         graph.on('node:embedded', autoResizeSwimLane, this)
-        graph.on('history:undo', function ({ cmds }) {
-            console.log(cmds)
-        }, this)
+        bindTitleEvent()
     }
     unbindEvents() {
         const { graph } = this
         graph.off('node:embedded', autoResizeSwimLane, this)
+        unbindTitleEvent
     }
     setData() { }
     dispose() {

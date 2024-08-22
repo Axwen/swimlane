@@ -174,28 +174,34 @@ function registrySwimlaneTitle() {
     Graph.registerNodeTool('title-remove', removeTitleButton, true)
 }
 
-function bindTitleEvent(graph) {
-    graph.on('node:mouseenter', ({ node, view }) => {
-        const { graph, tools } = view
-        const editorActive = tools?.tools?.some(item => item.editor)
-        if (!editorActive && isSwimLaneSubTitle(node)) {
-            addTitleTools(node, graph)
-        }
-    })
-    graph.on('node:mouseleave', ({ node, view }) => {
-        const { graph, tools } = view
-        const editorActive = tools?.tools?.some(item => item.editor)
-        if (!editorActive && isSwimLaneSubTitle(node)) {
-            removeTitleTools(node)
-        }
-    })
+function titleMouseenter({ node, view }) {
+    const { graph, tools } = view
+    const editorActive = tools?.tools?.some(item => item.editor)
+    if (!editorActive && isSwimLaneSubTitle(node)) {
+        addTitleTools(node, graph)
+    }
 }
-function initTitle(graph) {
-    bindTitleEvent(graph)
+
+function titleMouseleave({ node, view }) {
+    const { tools } = view
+    const editorActive = tools?.tools?.some(item => item.editor)
+    if (!editorActive && isSwimLaneSubTitle(node)) {
+        removeTitleTools(node)
+    }
+}
+
+function bindTitleEvent() {
+    graph.on('node:mouseenter', titleMouseenter)
+    graph.on('node:mouseleave', titleMouseleave)
+}
+function unbindTitleEvent() {
+    graph.off('node:mouseenter', titleMouseenter)
+    graph.off('node:mouseleave', titleMouseleave)
 }
 
 export {
     registrySwimlaneTitle,
-    initTitle,
+    bindTitleEvent,
+    unbindTitleEvent
 }
 
