@@ -172,30 +172,40 @@ export class TransfromImpl extends View {
         this.stopHandler()
         this.graph.view.delegateEvents()
     }
-    getChildren(dir, index) {
+    getMovableRange(dir, index) {
+        const { graph, matrix, swimlane } = this
+        const { x: originX, y: originY } = swimlane.getBBox()
         let swimLaneItems = []
-        const allChildren = []
+        const currentChildren = []
         const swimLaneNodes = []
         index = Number(index)
+        const nextIndex = index + 1
         if (dir === 'vertical') {
-            swimLaneItems = this.matrix.sliceCol(index, index + 1, true)
+            swimLaneItems = matrix.sliceCol(index, nextIndex, true)
         } else {
-            swimLaneItems = this.matrix.sliceRow(index, index + 1, true)
+            swimLaneItems = matrix.sliceRow(index, index + 1, true)
         }
         swimLaneItems.forEach(item => {
             const { id } = item
             const node = this.graph.getCellById(id)
             const children = node.getChildren() || []
             swimLaneNodes.push(node)
-            allChildren.push(...children)
+            currentChildren.push(...children)
         })
-        const { x: originX, y: originY } = this.swimlane.getBBox()
-        const { top, bottom, left, right } = this.graph.getCellsBBox(swimLaneNodes)
-        let min = dir === 'vertical' ? left - originX + minColSize : top - originY + minRowSize
-        const max = dir === 'vertical' ? right - originX + laneWidth : bottom - originY + laneHeight
-        if (allChildren.length > 0) {
-            const { right, bottom } = this.graph.getCellsBBox(allChildren)
-            console.log(right, bottom)
+
+        const { top, bottom, left, right } = graph.getCellsBBox(swimLaneNodes)
+
+        let min = 0
+        let max = 0
+        if (dir === 'vertical') {
+            min = left - originX + minColSize
+            max = right - originX + laneWidth
+        } else {
+            min = top - originY + minRowSize
+            max = bottom - originY + laneHeight
+        }
+        if (currentChildren.length > 0) {
+            const { right, bottom } = graph.getCellsBBox(currentChildren)
             min = (dir === 'vertical' ? right - originX : bottom - originY) + swimLanePadding
         }
         return {
@@ -203,52 +213,12 @@ export class TransfromImpl extends View {
             max
         }
     }
-    getMovableRange(dir, index) {
-        let min = 0;
-        let max = 0;
-        const { x: originX, y: originY } = this.swimlane.getBBox()
-        const nextIndex = index + 1
-
-        if (dir === 'vertical') {
-            const item = this.matrix.getValue(0, index)
-            const { x, width } = item
-            const base = x - originX
-            min = base + minColSize
-            if (nextIndex < this.cols) {
-                const nextItem = this.matrix.getValue(0, nextIndex)
-                const { x: nextX } = nextItem
-                max = nextX
-            } else {
-                max = base + width + laneWidth
-            }
-        } else {
-            const item = this.matrix.getValue(index, 0)
-            const { y, height } = item
-            const base = y - originY
-            min = base + minRowSize
-            if (nextIndex < this.rows) {
-                const nextItem = this.matrix.getValue(nextIndex, 0)
-                const { y: nextY } = nextItem
-                max = nextY
-            } else {
-                max = base - minRowSize + height + laneHeight
-            }
-        }
-        console.log(this.getChildren(dir, index), { min, max })
-        return this.getChildren(dir, index)
-        // return {
-        //     min,
-        //     max
-        // }
-    }
     startHandler(handler) {
         const dir = Dom.attr(handler, 'data-dir')
         const index = Dom.attr(handler, 'data-index')
         const { min, max } = this.getMovableRange(dir, index)
         const start = parseInt(Dom.getComputedStyle(handler, dir === 'vertical' ? 'left' : 'top'))
         const bbox = this.swimlane.getBBox()
-        const origin = this.graph.localToPage(bbox.x, bbox.y)
-        console.log(start, bbox.x, bbox.y, origin)
         this.handler = {
             start,
             origin: {
