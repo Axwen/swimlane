@@ -13,8 +13,8 @@ let graph = null
 let dnd = null
 
 function handleStartDrag(e) {
-  const target = e.target
-  const type = target.getAttribute('data-type')
+  // const target = e.target
+  // const type = target.getAttribute('data-type')
   const node = graph.createNode({
     width: 100,
     height: 40,

@@ -190,11 +190,11 @@ function titleMouseleave({ node, view }) {
     }
 }
 
-function bindTitleEvent() {
+function bindTitleEvent(graph) {
     graph.on('node:mouseenter', titleMouseenter)
     graph.on('node:mouseleave', titleMouseleave)
 }
-function unbindTitleEvent() {
+function unbindTitleEvent(graph) {
     graph.off('node:mouseenter', titleMouseenter)
     graph.off('node:mouseleave', titleMouseleave)
 }

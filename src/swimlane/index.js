@@ -1,7 +1,7 @@
 import { Basecoat, CssLoader } from '@antv/x6'
 
 import Matrix from './matrix'
-import { registrySwimlaneTitle, bindTitleEvent, BASE_LABEL } from './shape/title'
+import { registrySwimlaneTitle, bindTitleEvent, unbindTitleEvent, BASE_LABEL } from './shape/title'
 import { registrySwimlaneContent } from './shape/content'
 import { TransfromImpl } from './transfrom'
 import { swimLaneBaseConfig, swimLanePadding } from './variables'
@@ -125,7 +125,8 @@ export class SwimLane extends Basecoat {
             return false
         })
     }
-    constructor(options) {
+    // constructor(options) {
+    constructor() {
         super()
         this.name = 'swimlane'
         this.activating = false
@@ -375,12 +376,12 @@ export class SwimLane extends Basecoat {
     bindEvents() {
         const { graph } = this
         graph.on('node:embedded', autoResizeSwimLane, this)
-        bindTitleEvent()
+        bindTitleEvent(graph)
     }
     unbindEvents() {
         const { graph } = this
         graph.off('node:embedded', autoResizeSwimLane, this)
-        unbindTitleEvent
+        unbindTitleEvent(graph)
     }
     setData() { }
     dispose() {
