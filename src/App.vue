@@ -32,25 +32,28 @@ function handleStartDrag(e) {
   const node = graph.createNode(testNode)
   dnd.start(node, e)
 }
-function exportGraphToJson() {
-  // 获取图的 JSON 数据
-  const jsonData = graph.toJSON();
+// function exportGraphToJson() {
+//   // 获取图的 JSON 数据
+//   const jsonData = graph.toJSON();
 
-  // 将 JSON 数据转换为字符串
-  const jsonString = JSON.stringify(jsonData, null, 2);
+//   // 将 JSON 数据转换为字符串
+//   const jsonString = JSON.stringify(jsonData, null, 2);
 
-  // 创建 Blob 对象
-  const blob = new Blob([jsonString], { type: 'application/json' });
+//   // 创建 Blob 对象
+//   const blob = new Blob([jsonString], { type: 'application/json' });
 
-  // 创建一个链接元素
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'graph-data.json'; // 下载的文件名
+//   // 创建一个链接元素
+//   const a = document.createElement('a');
+//   a.href = URL.createObjectURL(blob);
+//   a.download = 'graph-data.json'; // 下载的文件名
 
-  // 触发下载
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+//   // 触发下载
+//   document.body.appendChild(a);
+//   a.click();
+//   document.body.removeChild(a);
+// }
+function handleLoadData() {
+  graph.fromJSON(data)
 }
 
 onMounted(() => {
@@ -143,7 +146,6 @@ onMounted(() => {
   // setTimeout(() => {
   //   graph.centerContent()
   // }, 1000)
-  graph.fromJSON(data)
 
   window.__x6_instances__.push(graph)
 })
@@ -159,9 +161,12 @@ onMounted(() => {
 <template>
   <div class="x6-app">
     <div class="dnd" ref="dndContainer">
-      <!-- <button @click="handleUndo">撤销</button>
+      <div class="btn-container">
+        <!-- <button @click="handleUndo">撤销</button>
       <button @click="handleRedo">重做</button> -->
-      <button @click="exportGraphToJson">下载json</button>
+        <!-- <button @click="exportGraphToJson">download</button> -->
+        <button @click="handleLoadData">load data</button>
+      </div>
       <div data-type="rect" class="rect" @mousedown="handleStartDrag">rect</div>
     </div>
     <div class="container">
@@ -181,17 +186,24 @@ onMounted(() => {
     box-sizing: border-box;
     width: 200px;
     flex: 0 0 240px;
-    padding: 20px;
+    padding: 40px 20px;
     border-right: 2px solid #666;
 
+    .btn-container{
+      position: absolute;
+      top:10px;
+      left:20px;
+      display: flex;
+      width:200px;
+    }
     .rect {
       display: flex;
       justify-content: center;
       align-items: center;
       background: #fff;
-      width: 40px;
+      width: 100px;
       height: 40px;
-      border: 2px solid #666;
+      border: 2px solid #8f8f8f;
       cursor: pointer;
     }
   }
