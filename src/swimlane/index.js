@@ -4,7 +4,7 @@ import Matrix from './matrix'
 import { registrySwimlaneTitle, bindTitleEvent, unbindTitleEvent, BASE_LABEL } from './shape/title'
 import { registrySwimlaneContent } from './shape/content'
 import { TransfromImpl } from './transfrom'
-import { swimLaneBaseConfig, swimLanePadding } from './variables'
+import { swimLaneBaseConfig, swimLanePadding, highlightColor } from './variables'
 import { content } from './style'
 
 registrySwimlaneTitle()
@@ -47,7 +47,7 @@ function genSwimLaneItemData(index, options, bbox) {
 // 群组改变时，自动调整子节点 左侧超出就移动子节点 右侧超出就扩大
 function autoResizeSwimLane({ node, currentParent }) {
     const { graph } = this
-    const selectedCells = graph.getSelectedCells()
+    const selectedCells = graph.getSelectedCells?.() ?? []
     if (selectedCells.length === 0) {
         selectedCells.push(node)
     }
@@ -106,10 +106,21 @@ function autoResizeSwimLane({ node, currentParent }) {
     if (resizeY) {
         this.resize({ type: 'row', index: rowIndex, offset: resizeY })
     }
+    graph.isSelectionEmpty?.()
     graph.stopBatch('batch-move-children')
 }
 
+
 export class SwimLane extends Basecoat {
+    static embeddingHighlightConfig = {
+        name: 'stroke',
+        args: {
+            padding: -5,
+            attrs: {
+                stroke: highlightColor,
+            },
+        },
+    }
     static isSwimLane({ view, node }) {
         const shape = node ? node.shape : view ? view.cell.shape : ''
         return shape.startsWith('swimlane')

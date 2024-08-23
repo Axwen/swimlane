@@ -2,32 +2,57 @@
 import { ref, onMounted } from 'vue'
 import { Graph } from '@antv/x6'
 import { Dnd } from '@antv/x6-plugin-dnd'
-import { Selection } from '@antv/x6-plugin-selection'
-import { History } from '@antv/x6-plugin-history'
+// import { Selection } from '@antv/x6-plugin-selection'
+// import { History } from '@antv/x6-plugin-history'
 import { SwimLane } from './swimlane'
+import data from './data.json'
 
+console.log(data)
 const container = ref()
 const dndContainer = ref()
 
 let graph = null
 let dnd = null
 
+const testNode = {
+  width: 100,
+  height: 40,
+  label: 'Rect',
+  attrs: {
+    body: {
+      stroke: '#8f8f8f',
+      strokeWidth: 1,
+    },
+  },
+}
+
 function handleStartDrag(e) {
   // const target = e.target
   // const type = target.getAttribute('data-type')
-  const node = graph.createNode({
-    width: 100,
-    height: 40,
-    label: 'Rect',
-    attrs: {
-      body: {
-        stroke: '#8f8f8f',
-        strokeWidth: 1,
-      },
-    },
-  })
+  const node = graph.createNode(testNode)
   dnd.start(node, e)
 }
+function exportGraphToJson() {
+  // 获取图的 JSON 数据
+  const jsonData = graph.toJSON();
+
+  // 将 JSON 数据转换为字符串
+  const jsonString = JSON.stringify(jsonData, null, 2);
+
+  // 创建 Blob 对象
+  const blob = new Blob([jsonString], { type: 'application/json' });
+
+  // 创建一个链接元素
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'graph-data.json'; // 下载的文件名
+
+  // 触发下载
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 onMounted(() => {
 
   window.__x6_instances__ = []
@@ -55,34 +80,23 @@ onMounted(() => {
       },
     },
     highlighting: {
-      embedding: {
-        name: 'stroke',
-        args: {
-          padding: -5,
-          attrs: {
-            stroke: '#73d13d',
-          },
-        },
-      },
+      embedding: SwimLane.embeddingHighlightConfig
     },
   })
 
   window.graph = graph
 
-  const selection = new Selection({
-    enabled: true,
-    multiple: true,
-    movable: true,
-    rubberband: true,
-    showNodeSelectionBox: true,
-    modifiers: ['shift'],
-    filter: (node) => {
-      return !SwimLane.isSwimLane({ node })
-    },
-
-  })
-  graph.use(selection)
-
+  // graph.use(new Selection({
+  //   enabled: true,
+  //   multiple: true,
+  //   movable: true,
+  //   rubberband: true,
+  //   showNodeSelectionBox: true,
+  //   modifiers: ['shift'],
+  //   filter: (node) => {
+  //     return !SwimLane.isSwimLane({ node })
+  //   },
+  // }))
 
   dnd = new Dnd({
     scaled: false,
@@ -91,105 +105,64 @@ onMounted(() => {
   })
   graph.use(dnd)
 
-  const swimLane = new SwimLane()
-  graph.use(swimLane)
+  graph.use(new SwimLane())
 
-  graph.use(
-    new History({
-      enabled: true,
-      beforeAddCommand(event, args) {
-        // 忽略历史变更
-        if (args.options.ignoreHistory) {
-          return false
-        }
-      },
-    }),
-  )
+  // graph.use(
+  //   new History({
+  //     enabled: true,
+  //     beforeAddCommand(event, args) {
+  //       // 忽略历史变更
+  //       if (args.options.ignoreHistory) {
+  //         return false
+  //       }
+  //     },
+  //   }),
+  // )
 
   graph.addNode({
     x: 100,
     y: 20,
-    width: 100,
-    height: 40,
-    label: 'Rect',
-    attrs: {
-      body: {
-        stroke: '#8f8f8f',
-        strokeWidth: 1,
-      },
-    },
+    ...testNode
   })
   graph.addNode({
     x: 200,
     y: 20,
-    width: 100,
-    height: 40,
-    label: 'Rect',
-    attrs: {
-      body: {
-        stroke: '#8f8f8f',
-        strokeWidth: 1,
-      },
-    },
+    ...testNode
   })
   graph.addNode({
     x: 100,
     y: 60,
-    width: 100,
-    height: 40,
-    label: 'Rect',
-    attrs: {
-      body: {
-        stroke: '#8f8f8f',
-        strokeWidth: 1,
-      },
-    },
+    ...testNode
   })
   graph.addNode({
     x: 200,
     y: 60,
-    width: 100,
-    height: 40,
-    label: 'Rect',
-    attrs: {
-      body: {
-        stroke: '#8f8f8f',
-        strokeWidth: 1,
-      },
-    },
+    ...testNode
   })
-  // graph.addNode({
-  //   shape: 'swimlane-title',
-  //   mainTitle: true,
-  //   x: 100,
-  //   y: 100,
-  //   width: 700,
-  //   height: 40,
-  // })
 
-
-  setTimeout(() => {
-    graph.centerContent()
-  }, 1000)
-
+  // setTimeout(() => {
+  //   graph.centerContent()
+  // }, 1000)
+  // graph.fromJSON(data)
 
   window.__x6_instances__.push(graph)
 })
-function handleUndo() {
-  graph.undo()
-}
-function handleRedo() {
-  graph.redo()
-}
+// function handleUndo() {
+//   graph.undo()
+// }
+// function handleRedo() {
+//   graph.redo()
+// }
 
 </script>
 
 <template>
   <div class="x6-app">
     <div class="dnd" ref="dndContainer">
+      <!-- <button @click="handleUndo">撤销</button>
+      <button @click="handleRedo">重做</button> -->
+      <button @click="exportGraphToJson">下载json</button>
       <div data-type="rect" class="rect" @mousedown="handleStartDrag">rect</div>
-      <button @click="handleUndo">撤销</button>
-      <button @click="handleRedo">重做</button>
     </div>
     <div class="container">
       <div ref="container"></div>

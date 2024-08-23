@@ -11,7 +11,6 @@ export const highlightHandlerSize = handerSize * 2
 
 export const highlightColor = '#73d13d'
 
-
 export const swimLaneBaseConfig = {
     position: [100, 100],
     sizes: [2, 2],

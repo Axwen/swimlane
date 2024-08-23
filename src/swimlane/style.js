@@ -21,6 +21,10 @@ export const content = `
         pointer-events: auto;
          cursor:row-resize;
     }
+    .x6-swimlane-transform-cursor-vertical .x6-swimlane-transform-handler[data-dir="horizontal"],
+    .x6-swimlane-transform-cursor-horizontal .x6-swimlane-transform-handler[data-dir="vertical"]{
+        pointer-events: none;
+    }
     .x6-swimlane-transform-content{
         position: relative;
         width:100%;
