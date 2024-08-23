@@ -13,7 +13,7 @@ export const highlightColor = '#73d13d'
 
 export const swimLaneBaseConfig = {
     position: [100, 100],
-    sizes: [2, 2],
+    sizes: [3, 3],
     laneWidth: 300,
     laneHeight: 300,
     rowTitleHeight: 40,

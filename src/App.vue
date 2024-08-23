@@ -119,31 +119,31 @@ onMounted(() => {
   //   }),
   // )
 
-  graph.addNode({
-    x: 100,
-    y: 20,
-    ...testNode
-  })
-  graph.addNode({
-    x: 200,
-    y: 20,
-    ...testNode
-  })
-  graph.addNode({
-    x: 100,
-    y: 60,
-    ...testNode
-  })
-  graph.addNode({
-    x: 200,
-    y: 60,
-    ...testNode
-  })
+  // graph.addNode({
+  //   x: 100,
+  //   y: 20,
+  //   ...testNode
+  // })
+  // graph.addNode({
+  //   x: 200,
+  //   y: 20,
+  //   ...testNode
+  // })
+  // graph.addNode({
+  //   x: 100,
+  //   y: 60,
+  //   ...testNode
+  // })
+  // graph.addNode({
+  //   x: 200,
+  //   y: 60,
+  //   ...testNode
+  // })
 
   // setTimeout(() => {
   //   graph.centerContent()
   // }, 1000)
-  // graph.fromJSON(data)
+  graph.fromJSON(data)
 
   window.__x6_instances__.push(graph)
 })

@@ -1,12 +1,49 @@
 
-
 export default class Matrix {
-    constructor(rows, cols) {
+    constructor(options) {
+        const { data, sizes } = options
+        if (Array.isArray(data) && data.length > 0) {
+            this.initByData(data)
+        }else{
+            this.initBySizes(sizes)
+        } 
+    }
+
+    initBySizes([rows, cols] = []) {
+        if (rows < 2) {
+            throw new Error('rows length should be greater than 2');
+        }
+        if (cols < 2) {
+            throw new Error('cols length should be greater than 2');
+        }
         this.rows = rows;
         this.cols = cols;
         this.data = Array.from({ length: rows }, () => Array(cols).fill(null));
     }
+    initByData(data) {
+        if (!Array.isArray(data) || data.length === 0) {
+            return
+        }
+        let maxRow = 0;
+        let maxCol = 0;
+        data.forEach(item => {
+            const { index: [rowIndex, colIndex] } = item;
+            if (rowIndex > maxRow) maxRow = rowIndex;
+            if (colIndex > maxCol) maxCol = colIndex;
+        });
 
+        this.rows = maxRow + 1
+        this.cols = maxCol + 1
+
+        const matrix = Array.from({ length: this.rows }, () => Array(this.cols).fill(null));
+
+        data.forEach(item => {
+            const [rowIndex, colIndex] = item.index;
+            matrix[rowIndex][colIndex] = item;
+        });
+        this.data = matrix
+        console.log(this)
+    }
     traverse(callback) {
         for (let i = 0; i < this.rows; i++) {
             for (let j = 0; j < this.cols; j++) {

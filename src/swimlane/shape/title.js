@@ -100,7 +100,7 @@ const titleShape = {
         }
     },
     propHooks(metadata) {
-        let { mainTitle, blank, ...others } = metadata
+        let { mainTitle, blank, subTitle, ...others } = metadata
         if (mainTitle) {
             ObjectExt.setByPath(others, 'attrs/label/textAnchor', 'start')
             ObjectExt.setByPath(others, 'attrs/label/refX', MAIN_TITLE_LABEL_OFFSET)
@@ -110,11 +110,9 @@ const titleShape = {
             ObjectExt.setByPath(others, 'attrs/text/text', '')
         }
 
-        ObjectExt.setByPath(others, 'subTitle', !mainTitle && !blank)
+        ObjectExt.setByPath(others, 'subTitle', subTitle ?? (!mainTitle && !blank))
 
-        return {
-            ...others
-        }
+        return others
     },
     tools: [
         {
@@ -137,29 +135,31 @@ function addTitleTools(node, graph) {
     const { swimlane: { matrix, options: { sizes } } } = graph
     const { index: [rowIndex] } = node.getData() || {}
     const isRowTitle = rowIndex === 0
-    const tools = [{
+    const addTool = {
         name: 'title-add',
         args: {
             x: '100%',
             y: '100%',
             offset: { x: -20, y: -20 },
-        },
-    }]
+        }
+    }
+
+    !node.hasTool(addTool.name) && node.addTools(addTool, { ignoreHistory: true })
 
     // rowTitle增加列 colTitle增加行
     const size = isRowTitle ? matrix.cols : matrix.rows
-    const minSize = isRowTitle ? sizes[0] : sizes[1]
-    if (size - 1 > minSize) {
-        tools.push({
-            name: 'title-remove',
-            args: {
-                x: '100%',
-                y: '100%',
-                offset: { x: -38, y: -20 },
-            }
-        })
+    const minSize = isRowTitle ? sizes[0] -1 : sizes[1]-1
+    const removeTool = {
+        name: 'title-remove',
+        args: {
+            x: '100%',
+            y: '100%',
+            offset: { x: -38, y: -20 },
+        }
     }
-    node.addTools(tools, { ignoreHistory: true })
+    if (size > minSize && !node.hasTool(removeTool.name)) {
+        node.addTools(removeTool, { ignoreHistory: true })
+    }
 }
 
 function removeTitleTools(node) {
@@ -175,17 +175,14 @@ function registrySwimlaneTitle() {
 }
 
 function titleMouseenter({ node, view }) {
-    const { graph, tools } = view
-    const editorActive = tools?.tools?.some(item => item.editor)
-    if (!editorActive && isSwimLaneSubTitle(node)) {
+    const { graph } = view
+    if (isSwimLaneSubTitle(node)) {
         addTitleTools(node, graph)
     }
 }
 
-function titleMouseleave({ node, view }) {
-    const { tools } = view
-    const editorActive = tools?.tools?.some(item => item.editor)
-    if (!editorActive && isSwimLaneSubTitle(node)) {
+function titleMouseleave({ node }) {
+    if (isSwimLaneSubTitle(node)) {
         removeTitleTools(node)
     }
 }

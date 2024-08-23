@@ -45,7 +45,7 @@ function genSwimLaneItemData(index, options, bbox) {
 }
 
 // 群组改变时，自动调整子节点 左侧超出就移动子节点 右侧超出就扩大
-function autoResizeSwimLane({ node, currentParent }) {
+function autoResize({ node, currentParent }) {
     const { graph } = this
     const selectedCells = graph.getSelectedCells?.() ?? []
     if (selectedCells.length === 0) {
@@ -110,7 +110,6 @@ function autoResizeSwimLane({ node, currentParent }) {
     graph.stopBatch('batch-move-children')
 }
 
-
 export class SwimLane extends Basecoat {
     static embeddingHighlightConfig = {
         name: 'stroke',
@@ -141,35 +140,51 @@ export class SwimLane extends Basecoat {
         super()
         this.name = 'swimlane'
         this.activating = false
-        const { position: [x, y], rowTitleHeight, sizes } = swimLaneBaseConfig
-        this.sizes = sizes
+        // const { position: [x, y], rowTitleHeight } = swimLaneBaseConfig
         // this.options = Object.assign({}, swimLaneBaseConfig, options)
         this.options = Object.assign({}, swimLaneBaseConfig, {
             // 主标题的position
-            origin: [x, y],
+            // origin: [x, y],
             //初始化position的还需要放一个主标题，剩余内容从这个位置开始
-            position: [x, y + rowTitleHeight]
+            // position: [x, y + rowTitleHeight]
         })
         CssLoader.ensure(this.name, content)
     }
     init(graph) {
         this.graph = graph
         graph.swimlane = this
-        this.matrix = this.initMatrix()
+        this.initMatrix()
         this.renderData()
         this.mainTitleNode = this.initMainTitle()
         this.transfromImpl = new TransfromImpl({ graph })
         this.bindEvents()
     }
+    reset() {
+        const { graph } = this
+        const swimLaneItems = []
+        graph.getNodes().forEach(node => {
+            if (SwimLane.isSwimLane({ node })) {
+                if(!node.subTitle&& !node.blank){
+                    this.mainTitleNode = node
+                }
+                const data = node.getData()
+                data && swimLaneItems.push(data)
+            }
+        })
+        this.resetMatrix(swimLaneItems)
+        this.transfromImpl.updateTransform()
+    }
     initMatrix() {
         const { sizes } = this.options
-        const [rowSize, colSize] = sizes
-        const matrix = new Matrix(rowSize + 1, colSize + 1)
+        const matrix = new Matrix({ sizes })
         matrix.traverse((item, rowIndex, colIndex) => {
             const itemData = genSwimLaneItemData([rowIndex, colIndex], this.options)
             matrix.setValue(rowIndex, colIndex, itemData)
         })
-        return matrix
+        this.matrix = matrix
+    }
+    resetMatrix(data) {
+        this.matrix = new Matrix({ data })
     }
     initMainTitle() {
         const { graph } = this
@@ -364,13 +379,14 @@ export class SwimLane extends Basecoat {
                     }
                     node.resize(width, height)
                     node.position(x, y)
-                    node.updateData({ index })
+                    node.updateData({ index, x, y, width, height })
                 } else {
                     const { index, ...other } = item
                     const node = graph.addNode({
                         ...other,
                         data: item
                     })
+                    node.updateData({ id: node.id })
                     // node.attr('text/text', node.id.substring(0, 4))
                     matrix.setValue(...index, {
                         ...item,
@@ -385,13 +401,15 @@ export class SwimLane extends Basecoat {
         graph.emit('swimlane:rendered', { matrix })
     }
     bindEvents() {
-        const { graph } = this
-        graph.on('node:embedded', autoResizeSwimLane, this)
+        const { graph, reset } = this
+        graph.on('node:embedded', autoResize, this)
+        graph.on('render:done', reset, this)
         bindTitleEvent(graph)
     }
     unbindEvents() {
-        const { graph } = this
-        graph.off('node:embedded', autoResizeSwimLane, this)
+        const { graph, reset } = this
+        graph.off('node:embedded', autoResize, this)
+        graph.off('render:done', reset, this)
         unbindTitleEvent(graph)
     }
     setData() { }
