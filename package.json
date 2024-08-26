@@ -6,7 +6,8 @@
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
-    "deploy": "pnpm run build && gh-pages -d dist"
+    "deploy": "pnpm run build && gh-pages -d dist",
+    "preinstall": "npx only-allow pnpm"
   },
   "dependencies": {
     "@antv/x6": "^2.18.1",

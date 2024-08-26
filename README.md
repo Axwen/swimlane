@@ -1,24 +1,29 @@
 # swimlane
 
 ## Project setup
-```
-npm install
+
+```js
+pnpm  install
 ```
 
 ### Compiles and hot-reloads for development
-```
-npm run serve
+
+```js
+pnpm  run serve
 ```
 
 ### Compiles and minifies for production
-```
-npm run build
+
+```js
+pnpm  run build
 ```
 
 ### Lints and fixes files
-```
-npm run lint
+
+```js
+pnpm  run lint
 ```
 
 ### Customize configuration
+
 See [Configuration Reference](https://cli.vuejs.org/config/).
