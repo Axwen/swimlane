@@ -4,7 +4,7 @@ import Matrix from './matrix'
 import { registrySwimlaneTitle, bindTitleEvent, unbindTitleEvent, BASE_LABEL } from './shape/title'
 import { registrySwimlaneContent } from './shape/content'
 import { TransfromImpl } from './transfrom'
-import { swimLaneBaseConfig, swimLanePadding, highlightColor } from './variables'
+import { swimLaneEmbeddingHighlightConfig, swimLaneBaseConfig, swimLanePadding } from './variables'
 import { content } from './style'
 
 registrySwimlaneTitle()
@@ -111,23 +111,15 @@ function autoResize({ node, currentParent }) {
 }
 
 export class SwimLane extends Basecoat {
-    static embeddingHighlightConfig = {
-        name: 'stroke',
-        args: {
-            padding: -5,
-            attrs: {
-                stroke: highlightColor,
-            },
-        },
-    }
+    static embeddingHighlightConfig = swimLaneEmbeddingHighlightConfig
     static isSwimLane({ view, node }) {
         const shape = node ? node.shape : view ? view.cell.shape : ''
-        return shape.startsWith('swimlane')
+        return shape.startsWith(this.name)
     }
     static findParentSwimLane(nodes, currentNode) {
         const bbox = currentNode.getBBox()
         return nodes.filter((node) => {
-            if (node.shape === 'swimlane-content') {
+            if (node.shape === this.titleShapeName) {
                 const targetBBox = node.getBBox()
                 // return targetBBox.containsRect(bbox)
                 return bbox.isIntersectWithRect(targetBBox)
@@ -135,19 +127,21 @@ export class SwimLane extends Basecoat {
             return false
         })
     }
+    get name(){
+        return 'swimlane'
+    }
+    get titleShapeName(){
+        return `${this.name}-title`
+    }
+    get contentShapeName(){
+        return `${this.name}-content`
+    }
     // constructor(options) {
     constructor() {
         super()
-        this.name = 'swimlane'
         this.activating = false
-        // const { position: [x, y], rowTitleHeight } = swimLaneBaseConfig
         // this.options = Object.assign({}, swimLaneBaseConfig, options)
-        this.options = Object.assign({}, swimLaneBaseConfig, {
-            // 主标题的position
-            // origin: [x, y],
-            //初始化position的还需要放一个主标题，剩余内容从这个位置开始
-            // position: [x, y + rowTitleHeight]
-        })
+        this.options = Object.assign({}, swimLaneBaseConfig, {})
         CssLoader.ensure(this.name, content)
     }
     init(graph) {
@@ -164,7 +158,7 @@ export class SwimLane extends Basecoat {
         const swimLaneItems = []
         graph.getNodes().forEach(node => {
             if (SwimLane.isSwimLane({ node })) {
-                if(!node.subTitle&& !node.blank){
+                if (!node.subTitle && !node.blank) {
                     this.mainTitleNode = node
                 }
                 const data = node.getData()
@@ -191,7 +185,7 @@ export class SwimLane extends Basecoat {
         const { rowTitleHeight } = this.options
         const { x, y, width } = this.getBBox()
         return graph.addNode({
-            shape: 'swimlane-title',
+            shape: this.titleShapeName,
             mainTitle: true,
             x: x,
             y: y - rowTitleHeight,

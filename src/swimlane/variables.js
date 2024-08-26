@@ -20,3 +20,13 @@ export const swimLaneBaseConfig = {
     columnTitleWidth: 100,
 }
 
+export const swimLaneEmbeddingHighlightConfig = {
+    name: 'stroke',
+    args: {
+        padding: -5,
+        attrs: {
+            stroke: highlightColor,
+        },
+    },
+}
+
