@@ -114,7 +114,7 @@ export class SwimLane extends Basecoat {
     static embeddingHighlightConfig = swimLaneEmbeddingHighlightConfig
     static isSwimLane({ view, node }) {
         const shape = node ? node.shape : view ? view.cell.shape : ''
-        return shape.startsWith(this.name)
+        return shape.startsWith(this.name.toLocaleLowerCase())
     }
     static findParentSwimLane(nodes, currentNode) {
         const bbox = currentNode.getBBox()
