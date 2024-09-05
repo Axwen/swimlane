@@ -47,7 +47,7 @@ function genSwimLaneItemData(index, options, bbox) {
 // 群组改变时，自动调整子节点 左侧超出就移动子节点 右侧超出就扩大
 function autoResize({ node, currentParent }) {
     const { graph } = this
-    const selectedCells = graph.getSelectedCells?.() ?? []
+    const selectedCells = graph.getSelectedCells?.() || []
     if (selectedCells.length === 0) {
         selectedCells.push(node)
     }
@@ -110,16 +110,20 @@ function autoResize({ node, currentParent }) {
     graph.stopBatch('batch-move-children')
 }
 
+const NAME = 'swimlane'
+const TITLE_NAME = `${NAME}-title`
+const CONTENT_NAME = `${NAME}-content`
+
 export class SwimLane extends Basecoat {
     static embeddingHighlightConfig = swimLaneEmbeddingHighlightConfig
     static isSwimLane({ view, node }) {
         const shape = node ? node.shape : view ? view.cell.shape : ''
-        return shape.startsWith(this.name.toLocaleLowerCase())
+        return shape.startsWith(NAME)
     }
     static findParentSwimLane(nodes, currentNode) {
         const bbox = currentNode.getBBox()
         return nodes.filter((node) => {
-            if (node.shape === this.titleShapeName) {
+            if (node.shape === CONTENT_NAME) {
                 const targetBBox = node.getBBox()
                 // return targetBBox.containsRect(bbox)
                 return bbox.isIntersectWithRect(targetBBox)
@@ -128,21 +132,23 @@ export class SwimLane extends Basecoat {
         })
     }
     get name(){
-        return 'swimlane'
+        return NAME
     }
     get titleShapeName(){
-        return `${this.name}-title`
+        return TITLE_NAME
     }
     get contentShapeName(){
-        return `${this.name}-content`
+        return CONTENT_NAME
     }
     // constructor(options) {
     constructor() {
+    
         super()
         this.activating = false
         // this.options = Object.assign({}, swimLaneBaseConfig, options)
         this.options = Object.assign({}, swimLaneBaseConfig, {})
         CssLoader.ensure(this.name, content)
+        console.log(this.name,this.contentShapeName,this.titleShapeName)
     }
     init(graph) {
         this.graph = graph

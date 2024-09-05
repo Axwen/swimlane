@@ -110,7 +110,7 @@ const titleShape = {
             ObjectExt.setByPath(others, 'attrs/text/text', '')
         }
 
-        ObjectExt.setByPath(others, 'subTitle', subTitle ?? (!mainTitle && !blank))
+        ObjectExt.setByPath(others, 'subTitle', subTitle === undefined ? (!mainTitle && !blank) : subTitle)
 
         return others
     },
@@ -148,7 +148,7 @@ function addTitleTools(node, graph) {
 
     // rowTitle增加列 colTitle增加行
     const size = isRowTitle ? matrix.cols : matrix.rows
-    const minSize = isRowTitle ? sizes[0] -1 : sizes[1]-1
+    const minSize = isRowTitle ? sizes[0] - 1 : sizes[1] - 1
     const removeTool = {
         name: 'title-remove',
         args: {
